@@ -12,13 +12,26 @@
 #include <stdlib.h>
 #include <sys/param.h>
 
-#include "cmd_parse.h"
+#include "psush.h"
 
 // I have this a global so that I don't have to pass it to every
 // function where I might want to use it. Yes, I know global variables
 // are frowned upon, but there are a couple useful uses for them.
 // This is one.
 unsigned short isVerbose = 0;
+
+
+int 
+main( int argc, char *argv[] )
+{
+    int ret = 0;
+
+    simple_argv(argc, argv);
+    ret = process_user_input_simple();
+
+    return(ret);
+}
+
 
 int 
 process_user_input_simple(void)

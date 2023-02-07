@@ -14,8 +14,8 @@ all: $(PROG)
 $(PROG): $(PROG).o
 	$(CC) $(CFLAGS) $< -o $(PROG)
 
-psush.o: psush_example.c cmd_parse.c cmd_parse.h
-	$(CC) $(CFLAGS) -c psush_example.c cmd_parse.c cmd_parse.h
+psush.o: psush.c psush.h
+	$(CC) $(CFLAGS) -c psush.c
 
 opt: clean
 	make DEBUG=-O3
