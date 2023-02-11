@@ -65,4 +65,5 @@ int process_user_input_simple(void);
 void simple_argv(int argc, char *argv[]);
 void add_history(cmd_list_t *cmds, char ** history);
 void print_history(char ** history);
+void free_params (param_t * params);
 #endif // _CMD_PARSE_H

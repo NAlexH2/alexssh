@@ -1,9 +1,8 @@
-// rchaney@pdx.edu
 
 /*
   Alex Harris
   By-Arrangement w/ Jesse Chaney
-  Exploring and learning to write our own shell!
+  Exploring and learning to write my own shell!
 */
 
 #include <stdio.h>
@@ -123,10 +122,17 @@ process_user_input_simple(void)
         cmd_list = NULL;
     }
     
+    // free the history array strings...
     for(int i = 0; i < HIST; ++i) {
         free(hist_array[i]);
     }
+    // then the array itself
     free(hist_array);
+    hist_array = NULL;
+
+    // maybe these too I guess
+    free(ret_val);
+    free(raw_cmd);
 
     return(EXIT_SUCCESS);
 }
@@ -228,16 +234,16 @@ exec_commands(cmd_list_t *cmds, char **history)
             if(history[HIST-1] != NULL)
                 print_history(history);
             else
-                printf("No historical command data present.\n");
+                printf("No historical command data present. ");
         }
         else {
             if((pid = fork()) < 0) {
-                perror("\n\nError forking child process\n\n");
+                perror("\n\nError forking child process ");
                 return exit(EXIT_FAILURE);
             }
             else if (pid == 0) {
                 if(execvp(ragged_array[0], ragged_array) < 0) {
-                  perror("\n\nError on failed exec\n\n");
+                  perror("\n\nError on failed exec ");
                   return exit(EXIT_FAILURE);
                 }
             }
@@ -252,12 +258,15 @@ exec_commands(cmd_list_t *cmds, char **history)
         // More than one command on the command line. Who'da thunk it!
         // This really falls into Stage 2.
     }
-    for(int i = 0; i < cmd->param_count; ++i) {
+    for(int i = 0; i < cmd->param_count+1; ++i) {
         free(ragged_array[i]);
+        ragged_array[i] = NULL;
     }
     free(ragged_array);
+    ragged_array = NULL;
 }
 
+// Free-tanic panic!
 void
 free_list(cmd_list_t *cmd_list)
 {
@@ -266,11 +275,11 @@ free_list(cmd_list_t *cmd_list)
     // the enjoyment of doing it for yourself.
     cmd_t *curr = cmd_list->head;
     while(cmd_list->head != NULL) {
-        cmd_list->head = curr->next;
-        free_cmd (curr);
-        free(curr);
-        curr = NULL;
-        curr = cmd_list->head;
+        curr = cmd_list->head->next;
+        free_cmd (cmd_list->head);
+        free(cmd_list->head);
+        cmd_list->head = NULL;
+        cmd_list->head = curr;
     }
     free(cmd_list);
     cmd_list = NULL;
@@ -283,33 +292,51 @@ free_cmd (cmd_t *cmd)
     // Proof left to the student.
     // Yep, on yer own.
     // I beleive in you.
-    param_t *temp = cmd->param_list;
-    while(temp != NULL){
-           cmd->param_list = cmd->param_list->next;
-           free(temp);
-           temp = cmd->param_list;
-    }
-    if(cmd->raw_cmd)
+    free_params(cmd->param_list);
+    if(cmd->raw_cmd) {
         free(cmd->raw_cmd);
-    if(cmd->cmd)
+        cmd->raw_cmd = NULL;
+    }
+    if(cmd->cmd) {
         free(cmd->cmd);
-    if(cmd->input_file_name)
+        cmd->cmd = NULL;
+    }
+    if(cmd->input_file_name) {
         free(cmd->input_file_name);
-    if(cmd->output_file_name)
+        cmd->input_file_name = NULL;
+    }
+    if(cmd->output_file_name) {
         free(cmd->output_file_name);
+        cmd->input_file_name = NULL;
+    }
 }
 
 void
+free_params (param_t * params)
+{
+    param_t *temp = params;
+    while(params != NULL){
+        temp = temp->next;
+        free(params);
+        params = temp;
+    }
+    params = NULL;
+    return;
+}
+
+// History updater
+void
 add_history(cmd_list_t *cmds, char **history)
 {
-    //FIXME get this to be the way it is in the PDF
-    // (newest is highest number, oldest is lowest.)
     free(history[0]);
-    for (int i = HIST-1; i >= 0; --i) {}
+    for (int i = 0; i < HIST-1; ++i) {
+        history[i] = history[i+1];
+    }
     history[HIST-1] = strdup(cmds->head->cmd);
     return;
 }
 
+// History printer
 void
 print_history(char ** history)
 {
@@ -321,6 +348,7 @@ print_history(char ** history)
     return;
 }
 
+// Jesse printing cmds
 void
 print_list(cmd_list_t *cmd_list)
 {
@@ -492,4 +520,5 @@ parse_commands(cmd_list_t *cmd_list)
     if (isVerbose > 0) {
         print_list(cmd_list);
     }
+
 }
