@@ -123,11 +123,11 @@ process_user_input_simple(void)
         cmd_list = NULL;
     }
     
-    for(int i = 0; i < cmd->param_count; ++i) {
+    for(int i = 0; i < HIST; ++i) {
         free(hist_array[i]);
     }
     free(hist_array);
-    
+
     return(EXIT_SUCCESS);
 }
 
@@ -181,7 +181,6 @@ exec_commands(cmd_list_t *cmds, char **history)
         ragged_array[i] = strdup(curr->param);
         curr = curr->next;
     }
-    fork();
     if (1 == cmds->count) {
         if (!cmd->cmd) {
             // if it is an empty command, bail.
@@ -305,11 +304,11 @@ add_history(cmd_list_t *cmds, char **history)
 {
     //FIXME get this to be the way it is in the PDF
     // (newest is highest number, oldest is lowest.)
-    free(history[HIST-1]);
+    free(history[0]);
     for (int i = HIST - 2; i >= 0; --i) {
-        history[i+1] = history[i];
+        history[i] = history[i+1];
     }
-    history[0] = strdup(cmds->head->cmd);
+    history[HIST-1] = strdup(cmds->head->cmd);
     return;
 }
 
