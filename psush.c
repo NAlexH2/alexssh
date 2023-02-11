@@ -124,15 +124,25 @@ process_user_input_simple(void)
     
     // free the history array strings...
     for(int i = 0; i < HIST; ++i) {
-        free(hist_array[i]);
+        if(hist_array[i] != NULL) {
+            free(hist_array[i]);
+        }
     }
     // then the array itself
-    free(hist_array);
-    hist_array = NULL;
+    if(hist_array != NULL) {
+        free(hist_array);
+        hist_array = NULL;
+    }
 
     // maybe these too I guess
-    free(ret_val);
-    free(raw_cmd);
+    if(ret_val != NULL) {
+        free(ret_val);
+        ret_val = NULL;
+    }
+    if(raw_cmd != NULL) {
+        free(raw_cmd);
+        raw_cmd = NULL;
+    }
 
     return(EXIT_SUCCESS);
 }
@@ -258,15 +268,21 @@ exec_commands(cmd_list_t *cmds, char **history)
         // More than one command on the command line. Who'da thunk it!
         // This really falls into Stage 2.
     }
-    for(int i = 0; i < cmd->param_count+1; ++i) {
-        free(ragged_array[i]);
-        ragged_array[i] = NULL;
+    if(ragged_array[0] != NULL) {
+        for(int i = 0; i < cmd->param_count+1; ++i) {
+            free(ragged_array[i]);
+            ragged_array[i] = NULL;
+        }
     }
-    free(ragged_array);
-    ragged_array = NULL;
+    if(ragged_array != NULL){
+        free(ragged_array);
+        ragged_array = NULL;
+    }
 }
 
 // Free-tanic panic!
+
+// Start going through our outter most list
 void
 free_list(cmd_list_t *cmd_list)
 {
@@ -276,6 +292,7 @@ free_list(cmd_list_t *cmd_list)
     cmd_t *curr = cmd_list->head;
     while(cmd_list->head != NULL) {
         curr = cmd_list->head->next;
+        // free the cmd_t inside our head node
         free_cmd (cmd_list->head);
         free(cmd_list->head);
         cmd_list->head = NULL;
@@ -286,13 +303,21 @@ free_list(cmd_list_t *cmd_list)
     return;
 }
 
+// Inside the head, freeing commands. Wish I could do that.
 void
 free_cmd (cmd_t *cmd)
 {
     // Proof left to the student.
     // Yep, on yer own.
     // I beleive in you.
-    free_params(cmd->param_list);
+    
+    // S T O P -> Free our other other structure param_t
+    if(cmd->param_list != NULL) {
+        free_params(cmd->param_list);
+        cmd->param_list = NULL;
+    }
+
+    // okay, do the rest.
     if(cmd->raw_cmd) {
         free(cmd->raw_cmd);
         cmd->raw_cmd = NULL;
@@ -311,6 +336,7 @@ free_cmd (cmd_t *cmd)
     }
 }
 
+// Finally, params...
 void
 free_params (param_t * params)
 {
@@ -320,7 +346,6 @@ free_params (param_t * params)
         free(params);
         params = temp;
     }
-    params = NULL;
     return;
 }
 
