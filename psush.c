@@ -225,7 +225,7 @@ exec_commands(cmd_list_t *cmds, char **history)
             printf("\n");
         }
         else if (0 == strcmp(cmd->cmd, HIST_CMD)) {
-            if(history[0] != NULL)
+            if(history[HIST-1] != NULL)
                 print_history(history);
             else
                 printf("No historical command data present.\n");
@@ -305,9 +305,7 @@ add_history(cmd_list_t *cmds, char **history)
     //FIXME get this to be the way it is in the PDF
     // (newest is highest number, oldest is lowest.)
     free(history[0]);
-    for (int i = HIST - 2; i >= 0; --i) {
-        history[i] = history[i+1];
-    }
+    for (int i = HIST-1; i >= 0; --i) {}
     history[HIST-1] = strdup(cmds->head->cmd);
     return;
 }
