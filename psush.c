@@ -11,9 +11,11 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/param.h>
+#include <sys/wait.h>
 
 #include "psush.h"
 
+# define HIST 10
 // I have this a global so that I don't have to pass it to every
 // function where I might want to use it. Yes, I know global variables
 // are frowned upon, but there are a couple useful uses for them.
@@ -42,6 +44,8 @@ process_user_input_simple(void)
     cmd_list_t *cmd_list = NULL;
     int cmd_count = 0;
     char prompt[30];
+    char **hist_array = calloc(HIST, sizeof(hist_array));
+    memset(hist_array, 0, sizeof(char *));
 
     // Set up a cool user prompt.
     sprintf(prompt, PROMPT_STR " %s β: ", getenv("LOGNAME"));
@@ -105,9 +109,12 @@ process_user_input_simple(void)
         // go through each individual command.
         parse_commands(cmd_list);
 
+        //Update the history of the list
+        add_history(cmd_list, hist_array);
+
         // This is a really good place to call a function to exec the
         // the commands just parsed from the user's command line.
-        exec_commands(cmd_list);
+        exec_commands(cmd_list, hist_array);
 
         // We (that includes you) need to free up all the stuff we just
         // allocated from the heap. That linked list of linked lists looks
@@ -115,7 +122,12 @@ process_user_input_simple(void)
         free_list(cmd_list);
         cmd_list = NULL;
     }
-
+    
+    for(int i = 0; i < cmd->param_count; ++i) {
+        free(hist_array[i]);
+    }
+    free(hist_array);
+    
     return(EXIT_SUCCESS);
 }
 
@@ -154,10 +166,22 @@ simple_argv(int argc, char *argv[] )
 }
 
 void 
-exec_commands( cmd_list_t *cmds ) 
+exec_commands(cmd_list_t *cmds, char **history) 
 {
     cmd_t *cmd = cmds->head;
+    param_t *curr = cmd->param_list;
+    pid_t pid;
+    int waitingint;
 
+    char ** ragged_array = calloc(cmd->param_count+1, sizeof(char **));
+    memset(ragged_array, 0, sizeof(char *));
+    ragged_array[0] = strdup(cmd->cmd);
+    //setup ragged array to include the options for the current cmd
+    for(int i = 1; curr != NULL; ++i) {
+        ragged_array[i] = strdup(curr->param);
+        curr = curr->next;
+    }
+    fork();
     if (1 == cmds->count) {
         if (!cmd->cmd) {
             // if it is an empty command, bail.
@@ -179,7 +203,8 @@ exec_commands( cmd_list_t *cmds )
                     // a happy chdir!  ;-)
                 }
                 else {
-                    // a sad chdir.  :-(
+                    printf(" " CD_CMD ": The directory '%s' does not exist\n",
+                            cmd->param_list->param);
                 }
             }
         }
@@ -195,11 +220,32 @@ exec_commands( cmd_list_t *cmds )
             // insert code here
             // insert code here
             // Is that an echo?
+            for(int i = 1; i < cmd->param_count+1; ++i) {
+                printf("%s ", ragged_array[i]);
+            }
+            printf("\n");
+        }
+        else if (0 == strcmp(cmd->cmd, HIST_CMD)) {
+            if(history[0] != NULL)
+                print_history(history);
+            else
+                printf("No historical command data present.\n");
         }
         else {
-            // A single command to create and exec
-            // If you really do things correctly, you don't need a special call
-            // for a single command, as distinguished from multiple commands.
+            if((pid = fork()) < 0) {
+                perror("\n\nError forking child process\n\n");
+                return exit(EXIT_FAILURE);
+            }
+            else if (pid == 0) {
+                if(execvp(ragged_array[0], ragged_array) < 0) {
+                  perror("\n\nError on failed exec\n\n");
+                  return exit(EXIT_FAILURE);
+                }
+            }
+            else {
+                while(wait(&waitingint) != pid)
+                    ;
+            }
         }
     }
     else {
@@ -207,6 +253,10 @@ exec_commands( cmd_list_t *cmds )
         // More than one command on the command line. Who'da thunk it!
         // This really falls into Stage 2.
     }
+    for(int i = 0; i < cmd->param_count; ++i) {
+        free(ragged_array[i]);
+    }
+    free(ragged_array);
 }
 
 void
@@ -215,6 +265,63 @@ free_list(cmd_list_t *cmd_list)
     // Proof left to the student.
     // You thought I was going to do this for you! HA! You get
     // the enjoyment of doing it for yourself.
+    cmd_t *curr = cmd_list->head;
+    while(cmd_list->head != NULL) {
+        cmd_list->head = curr->next;
+        free_cmd (curr);
+        free(curr);
+        curr = NULL;
+        curr = cmd_list->head;
+    }
+    free(cmd_list);
+    cmd_list = NULL;
+    return;
+}
+
+void
+free_cmd (cmd_t *cmd)
+{
+    // Proof left to the student.
+    // Yep, on yer own.
+    // I beleive in you.
+    param_t *temp = cmd->param_list;
+    while(temp != NULL){
+           cmd->param_list = cmd->param_list->next;
+           free(temp);
+           temp = cmd->param_list;
+    }
+    if(cmd->raw_cmd)
+        free(cmd->raw_cmd);
+    if(cmd->cmd)
+        free(cmd->cmd);
+    if(cmd->input_file_name)
+        free(cmd->input_file_name);
+    if(cmd->output_file_name)
+        free(cmd->output_file_name);
+}
+
+void
+add_history(cmd_list_t *cmds, char **history)
+{
+    //FIXME get this to be the way it is in the PDF
+    // (newest is highest number, oldest is lowest.)
+    free(history[HIST-1]);
+    for (int i = HIST - 2; i >= 0; --i) {
+        history[i+1] = history[i];
+    }
+    history[0] = strdup(cmds->head->cmd);
+    return;
+}
+
+void
+print_history(char ** history)
+{
+    for(int i = 0; i < HIST; ++i) {
+        if(history[i] != NULL) {
+            printf("%d: %s\n", i+1, history[i]);
+        }
+    }
+    return;
 }
 
 void
@@ -228,13 +335,6 @@ print_list(cmd_list_t *cmd_list)
     }
 }
 
-void
-free_cmd (cmd_t *cmd)
-{
-    // Proof left to the student.
-    // Yep, on yer own.
-    // I beleive in you.
-}
 
 // Oooooo, this is nice. Show the fully parsed command line in a nice
 // easy to read and digest format.
@@ -297,6 +397,7 @@ parse_commands(cmd_list_t *cmd_list)
         // It's like double exciting.
         stralloca(raw, cmd->raw_cmd);
 
+        //strtok breaks a string into a sequence of zero or more nonempty tokens.
         arg = strtok(raw, SPACE_DELIM);
         if (NULL == arg) {
             // The way I've done this is like ya'know way UGLY.

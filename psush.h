@@ -7,6 +7,7 @@
 
 # define CD_CMD  "cd"
 # define CWD_CMD "cwd"
+# define HIST_CMD "history"
 # define ECHO_CMD "echo"
 # define QUIT_CMD "quit"
 
@@ -50,6 +51,7 @@ typedef struct cmd_s {
 typedef struct cmd_list_s {
     cmd_t *head;
     cmd_t *tail;
+   ;
     int count;
 } cmd_list_t;
 
@@ -58,8 +60,9 @@ void free_list(struct cmd_list_s *);
 void print_list(struct cmd_list_s *);
 void free_cmd(struct cmd_s *);
 void print_cmd(struct cmd_s *);
-void exec_commands(cmd_list_t *cmds);
+void exec_commands(cmd_list_t *cmds, char ** history);
 int process_user_input_simple(void);
 void simple_argv(int argc, char *argv[]);
-
+void add_history(cmd_list_t *cmds, char ** history);
+void print_history(char ** history);
 #endif // _CMD_PARSE_H
