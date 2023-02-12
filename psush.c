@@ -343,7 +343,13 @@ free_params (param_t * params)
     param_t *temp = params;
     while(params != NULL){
         temp = temp->next;
+        if(params->param){
+            free(params->param);
+            params->param = NULL;
+        }
+
         free(params);
+        params = NULL;
         params = temp;
     }
     return;
