@@ -63,7 +63,8 @@ void print_cmd(struct cmd_s *);
 void exec_commands(cmd_list_t *cmds, char ** history);
 int process_user_input_simple(void);
 void simple_argv(int argc, char *argv[]);
-void add_history(cmd_list_t *cmds, char ** history);
+void add_history(char *cmd, char ** history);
 void print_history(char ** history);
 void free_params (param_t * params);
+char **ragged_array(cmd_t * cmd);
 #endif // _CMD_PARSE_H

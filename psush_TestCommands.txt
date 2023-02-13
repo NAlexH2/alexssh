@@ -1,22 +1,22 @@
-pwd
+cwd
 
 cd .
-pwd
+cwd
 
 cd ..
-pwd
+cwd
 
 cd Lab2
-pwd
+cwd
 
 
 cd
-pwd
+cwd
 
 quit
 
 cd ././../Lab2/.
-pwd
+cwd
 
 
 ls

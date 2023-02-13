@@ -76,6 +76,10 @@ process_user_input_simple(void)
             // any memory leaks. ;-)
             break;
         }
+
+        // Add history
+        add_history(str, hist_array);
+
         // Basic commands are pipe delimited.
         // This is really for Stage 2.
         raw_cmd = strtok(str, PIPE_DELIM);
@@ -107,9 +111,6 @@ process_user_input_simple(void)
         // Now that I have a linked list of the pipe delimited commands,
         // go through each individual command.
         parse_commands(cmd_list);
-
-        //Update the history of the list
-        add_history(cmd_list, hist_array);
 
         // This is a really good place to call a function to exec the
         // the commands just parsed from the user's command line.
@@ -185,18 +186,9 @@ void
 exec_commands(cmd_list_t *cmds, char **history) 
 {
     cmd_t *cmd = cmds->head;
-    param_t *curr = cmd->param_list;
     pid_t pid;
-    int waitingint;
 
-    char ** ragged_array = calloc(cmd->param_count+1, sizeof(char **));
-    memset(ragged_array, 0, sizeof(char *));
-    ragged_array[0] = strdup(cmd->cmd);
-    //setup ragged array to include the options for the current cmd
-    for(int i = 1; curr != NULL; ++i) {
-        ragged_array[i] = strdup(curr->param);
-        curr = curr->next;
-    }
+
     if (1 == cmds->count) {
         if (!cmd->cmd) {
             // if it is an empty command, bail.
@@ -210,6 +202,14 @@ exec_commands(cmd_list_t *cmds, char **history)
                 // Is there an environment variable, somewhere, that contains
                 // the HOME directory that could be used as an argument to
                 // the chdir() fucntion?
+                if (0 == chdir(getenv("HOME"))) {
+                    // woo!
+                }
+                else {
+                    // boo!
+                    printf(" " CD_CMD ": Failed to change directory to '%s'.\n",
+                    getenv("HOME"));
+                }
             }
             else {
                 // try and cd to the target directory. It would be good to check
@@ -218,7 +218,7 @@ exec_commands(cmd_list_t *cmds, char **history)
                     // a happy chdir!  ;-)
                 }
                 else {
-                    printf(" " CD_CMD ": The directory '%s' does not exist\n",
+                    printf(" " CD_CMD ": The directory '%s' does not exist\n.",
                             cmd->param_list->param);
                 }
             }
@@ -235,8 +235,10 @@ exec_commands(cmd_list_t *cmds, char **history)
             // insert code here
             // insert code here
             // Is that an echo?
-            for(int i = 1; i < cmd->param_count+1; ++i) {
-                printf("%s ", ragged_array[i]);
+            param_t *param = cmd->param_list;
+            while(param) {
+                printf("%s ", param->param);
+                param = param->next;
             }
             printf("\n");
         }
@@ -246,39 +248,47 @@ exec_commands(cmd_list_t *cmds, char **history)
             else
                 printf("No historical command data present. ");
         }
+        // single command option
         else {
             if((pid = fork()) < 0) {
                 perror("\n\nError forking child process ");
                 return exit(EXIT_FAILURE);
             }
             else if (pid == 0) {
-                if(execvp(ragged_array[0], ragged_array) < 0) {
+                    char ** r_array = ragged_array(cmd);
+                if(execvp(r_array[0], r_array) < 0) {
                   perror("\n\nError on failed exec ");
                   return exit(EXIT_FAILURE);
                 }
+
             }
             else {
-                while(wait(&waitingint) != pid)
-                    ;
+                while(wait(NULL) >= 0);
             }
         }
     }
+    //piped commands
     else {
         // Other things???
         // More than one command on the command line. Who'da thunk it!
         // This really falls into Stage 2.
     }
-    if(ragged_array[0] != NULL) {
-        for(int i = 0; i < cmd->param_count+1; ++i) {
-            free(ragged_array[i]);
-            ragged_array[i] = NULL;
-        }
-    }
-    if(ragged_array != NULL){
-        free(ragged_array);
-        ragged_array = NULL;
-    }
 }
+
+// Ragged array generation for child proc
+char **ragged_array(cmd_t *cmd) {
+    param_t *curr = cmd->param_list;
+    char ** rag_array = calloc(cmd->param_count+1, sizeof(char **));
+    memset(ragged_array, 0, sizeof(char *));
+    rag_array[0] = strdup(cmd->cmd);
+    //setup ragged array to include the options for the current cmd
+    for(int i = 1; curr != NULL; ++i) {
+        rag_array[i] = strdup(curr->param);
+        curr = curr->next;
+    }
+    return rag_array;
+}
+
 
 // Free-tanic panic!
 
@@ -357,13 +367,13 @@ free_params (param_t * params)
 
 // History updater
 void
-add_history(cmd_list_t *cmds, char **history)
+add_history(char *cmd, char **history)
 {
     free(history[0]);
     for (int i = 0; i < HIST-1; ++i) {
         history[i] = history[i+1];
     }
-    history[HIST-1] = strdup(cmds->head->cmd);
+    history[HIST-1] = strdup(cmd);
     return;
 }
 
