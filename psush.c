@@ -259,7 +259,10 @@ exec_commands(cmd_list_t *cmds, char **history)
                             "\n\n**** redirect in failed %d ****\n", errno);
                             exit(7);
                         }
-                        dup2(fdIn, STDIN_FILENO);
+                        if(dup2(fdIn, STDIN_FILENO) < 0) {
+                            perror("child process failed dup2");
+                            _exit(EXIT_FAILURE);           
+                        }
                         close(fdIn);
                     }
                     if(cmd->output_dest && cmd->output_file_name) {
@@ -268,17 +271,19 @@ exec_commands(cmd_list_t *cmds, char **history)
                                 O_WRONLY | O_CREAT | O_TRUNC, mode);
                         if (fdOut < 0) {
                             fprintf(stderr, 
-                            "\n\n**** redirect out failed %d ****\n", errno);
+                              "\n\n**** redirect out failed %d ****\n", errno);
                             exit(7);
                         }
-                        dup2(fdOut, STDOUT_FILENO);
+                        if(dup2(fdOut, STDIN_FILENO) < 0) {
+                            perror("child process failed dup2");
+                            _exit(EXIT_FAILURE);
+                        }
                         close(fdOut);
                     }
                 if(execvp(r_array[0], r_array) < 0) {
                   perror("\n\nError on failed exec ");
-                  return exit(EXIT_FAILURE);
+                  _exit(EXIT_FAILURE);
                 }
-
             }
             else {
                 while(wait(NULL) >= 0);
@@ -290,6 +295,42 @@ exec_commands(cmd_list_t *cmds, char **history)
         // Other things???
         // More than one command on the command line. Who'da thunk it!
         // This really falls into Stage 2.
+        int pipes[2] = {-1, -1};
+        pid = -1;
+        pipe(pipes);
+        pid = fork();
+        switch (pid) {
+          case -1: //fork failed
+              perror("\n\nNot forked.\n\n");
+              _exit(EXIT_FAILURE);
+              break;
+          case 0:
+          {
+            char ** r_array = ragged_array(cmd);
+            if(dup2(pipes[STDIN_FILENO], STDIN_FILENO) < 0) {
+              perror("child process failed dup2");
+              _exit(EXIT_FAILURE);
+            }
+            close(pipes[STDIN_FILENO]);
+            close(pipes[STDOUT_FILENO]);
+            execvp(r_array[0], r_array);
+            perror("child process cannot exec program");
+            _exit(EXIT_FAILURE);
+          }
+          break;
+          default:
+          {
+            char ** r_array = ragged_array(cmd);
+            if(dup2(pipes[STDOUT_FILENO], STDOUT_FILENO) < 0) {
+              perror("\n\npsush failed dup2");
+            }
+            close(pipes[STDIN_FILENO]);
+            close(pipes[STDOUT_FILENO]);
+            execvp(r_array[0], r_array);
+            fprintf(stderr,"\n\nError on failed exec %d", errno);
+            _exit(EXIT_FAILURE);
+          }
+        }
     }
 }
 
