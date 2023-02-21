@@ -248,42 +248,35 @@ exec_commands(cmd_list_t *cmds, char **history)
                 return exit(EXIT_FAILURE);
             }
             else if (pid == 0) {
-                    char ** r_array = ragged_array(cmd);
-                    int fdIn;
-                    int fdOut;
-                    //do redirection
-                    if(cmd->input_src && cmd->input_file_name) {
-                        fdIn = open(cmd->input_file_name, O_RDONLY);
-                        if (fdIn < 0) {
-                            fprintf(stderr, 
-                            "\n\n**** redirect in failed %d ****\n", errno);
-                            exit(7);
-                        }
-                        if(dup2(fdIn, STDIN_FILENO) < 0) {
-                            perror("child process failed dup2");
-                            _exit(EXIT_FAILURE);           
-                        }
-                        close(fdIn);
+                char **r_array = ragged_array(cmd);
+                int fdIn;
+                int fdOut;
+                // do redirection
+                if (cmd->input_src && cmd->input_file_name) {
+                    fdIn = open(cmd->input_file_name, O_RDONLY);
+                    if (fdIn < 0) {
+                      fprintf(stderr,
+                              "\n\n**** redirect in failed %d ****\n", errno);
+                      exit(7);
                     }
-                    if(cmd->output_dest && cmd->output_file_name) {
-                        mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
-                        fdOut = open(cmd->output_file_name, 
-                                O_WRONLY | O_CREAT | O_TRUNC, mode);
-                        if (fdOut < 0) {
-                            fprintf(stderr, 
-                              "\n\n**** redirect out failed %d ****\n", errno);
-                            exit(7);
-                        }
-                        if(dup2(fdOut, STDIN_FILENO) < 0) {
-                            perror("child process failed dup2");
-                            _exit(EXIT_FAILURE);
-                        }
+                    dup2(fdIn, STDIN_FILENO);
+                    close(fdIn);
+                }
+                if(cmd->output_dest && cmd->output_file_name) {
+                    mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
+                    fdOut = open(cmd->output_file_name, 
+                            O_WRONLY | O_CREAT | O_TRUNC, mode);
+                            if (fdOut < 0) {
+                                fprintf(stderr, 
+                                "\n\n**** redirect out failed %d ****\n", errno);
+                                exit(7);
+                            }
+                        dup2(fdOut, STDOUT_FILENO);
                         close(fdOut);
                     }
-                if(execvp(r_array[0], r_array) < 0) {
-                  perror("\n\nError on failed exec ");
-                  _exit(EXIT_FAILURE);
-                }
+                execvp(r_array[0], r_array);
+                perror("\n\nError on failed exec ");
+                return exit(EXIT_FAILURE);
             }
             else {
                 while(wait(NULL) >= 0);
@@ -306,7 +299,7 @@ exec_commands(cmd_list_t *cmds, char **history)
               break;
           case 0:
           {
-            char ** r_array = ragged_array(cmd);
+            char ** r_array = ragged_array(cmd->next);
             if(dup2(pipes[STDIN_FILENO], STDIN_FILENO) < 0) {
               perror("child process failed dup2");
               _exit(EXIT_FAILURE);
@@ -321,6 +314,10 @@ exec_commands(cmd_list_t *cmds, char **history)
           default:
           {
             char ** r_array = ragged_array(cmd);
+            if ((pid = fork()) < 0) {
+              perror("\n\nError forking child process ");
+              return exit(EXIT_FAILURE);
+            }
             if(dup2(pipes[STDOUT_FILENO], STDOUT_FILENO) < 0) {
               perror("\n\npsush failed dup2");
             }
