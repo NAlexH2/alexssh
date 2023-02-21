@@ -293,40 +293,40 @@ exec_commands(cmd_list_t *cmds, char **history)
         pipe(pipes);
         pid = fork();
         switch (pid) {
-          case -1: //fork failed
-              perror("\n\nNot forked.\n\n");
-              _exit(EXIT_FAILURE);
-              break;
-          case 0:
-          {
-            char ** r_array = ragged_array(cmd->next);
-            if(dup2(pipes[STDIN_FILENO], STDIN_FILENO) < 0) {
-              perror("child process failed dup2");
-              _exit(EXIT_FAILURE);
+            case -1: //fork failed
+                    perror("\n\nNot forked.\n\n");
+                    _exit(EXIT_FAILURE);
+                    break;
+            case 0:
+                {
+                    char ** r_array = ragged_array(cmd->next);
+                    if(dup2(pipes[STDIN_FILENO], STDIN_FILENO) < 0) {
+                      perror("child process failed dup2");
+                      _exit(EXIT_FAILURE);
+                    }
+                    close(pipes[STDIN_FILENO]);
+                    close(pipes[STDOUT_FILENO]);
+                    execvp(r_array[0], r_array);
+                    perror("child process cannot exec program");
+                    _exit(EXIT_FAILURE);
+                }
+                break;
+            default:
+            {
+                char ** r_array = ragged_array(cmd);
+                if ((pid = fork()) < 0) {
+                  perror("\n\nError forking child process ");
+                  return exit(EXIT_FAILURE);
+                }
+                if(dup2(pipes[STDOUT_FILENO], STDOUT_FILENO) < 0) {
+                  perror("\n\npsush failed dup2");
+                }
+                close(pipes[STDIN_FILENO]);
+                close(pipes[STDOUT_FILENO]);
+                execvp(r_array[0], r_array);
+                fprintf(stderr,"\n\nError on failed exec %d", errno);
+                _exit(EXIT_FAILURE);
             }
-            close(pipes[STDIN_FILENO]);
-            close(pipes[STDOUT_FILENO]);
-            execvp(r_array[0], r_array);
-            perror("child process cannot exec program");
-            _exit(EXIT_FAILURE);
-          }
-          break;
-          default:
-          {
-            char ** r_array = ragged_array(cmd);
-            if ((pid = fork()) < 0) {
-              perror("\n\nError forking child process ");
-              return exit(EXIT_FAILURE);
-            }
-            if(dup2(pipes[STDOUT_FILENO], STDOUT_FILENO) < 0) {
-              perror("\n\npsush failed dup2");
-            }
-            close(pipes[STDIN_FILENO]);
-            close(pipes[STDOUT_FILENO]);
-            execvp(r_array[0], r_array);
-            fprintf(stderr,"\n\nError on failed exec %d", errno);
-            _exit(EXIT_FAILURE);
-          }
         }
     }
 }
