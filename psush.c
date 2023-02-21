@@ -11,6 +11,9 @@
 #include <stdlib.h>
 #include <sys/param.h>
 #include <sys/wait.h>
+#include <sys/stat.h> 
+#include <fcntl.h>
+#include <errno.h>
 
 #include "psush.h"
 
@@ -135,16 +138,6 @@ process_user_input_simple(void)
         hist_array = NULL;
     }
 
-    // maybe these too I guess
-    if(ret_val != NULL) {
-        free(ret_val);
-        ret_val = NULL;
-    }
-    if(raw_cmd != NULL) {
-        free(raw_cmd);
-        raw_cmd = NULL;
-    }
-
     return(EXIT_SUCCESS);
 }
 
@@ -256,6 +249,31 @@ exec_commands(cmd_list_t *cmds, char **history)
             }
             else if (pid == 0) {
                     char ** r_array = ragged_array(cmd);
+                    int fdIn;
+                    int fdOut;
+                    //do redirection
+                    if(cmd->input_src && cmd->input_file_name) {
+                        fdIn = open(cmd->input_file_name, O_RDONLY);
+                        if (fdIn < 0) {
+                            fprintf(stderr, 
+                            "\n\n**** redirect in failed %d ****\n", errno);
+                            exit(7);
+                        }
+                        dup2(fdIn, STDIN_FILENO);
+                        close(fdIn);
+                    }
+                    if(cmd->output_dest && cmd->output_file_name) {
+                        mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
+                        fdOut = open(cmd->output_file_name, 
+                                O_WRONLY | O_CREAT | O_TRUNC, mode);
+                        if (fdOut < 0) {
+                            fprintf(stderr, 
+                            "\n\n**** redirect out failed %d ****\n", errno);
+                            exit(7);
+                        }
+                        dup2(fdOut, STDOUT_FILENO);
+                        close(fdOut);
+                    }
                 if(execvp(r_array[0], r_array) < 0) {
                   perror("\n\nError on failed exec ");
                   return exit(EXIT_FAILURE);
@@ -278,8 +296,7 @@ exec_commands(cmd_list_t *cmds, char **history)
 // Ragged array generation for child proc
 char **ragged_array(cmd_t *cmd) {
     param_t *curr = cmd->param_list;
-    char ** rag_array = calloc(cmd->param_count+1, sizeof(char **));
-    memset(ragged_array, 0, sizeof(char *));
+    char ** rag_array = calloc(cmd->param_count+2, sizeof(char **));
     rag_array[0] = strdup(cmd->cmd);
     //setup ragged array to include the options for the current cmd
     for(int i = 1; curr != NULL; ++i) {

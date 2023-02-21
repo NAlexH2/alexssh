@@ -1,0 +1,50 @@
+ls -l
+
+wc -l < /etc/passwd
+
+cat -n /etc/passwd > JUNK
+
+ls -la -F -t -r -h
+
+ls | wc
+
+ls -l | wc -l
+
+ps -jH | grep defunct
+ps -jH | grep defunct
+ps -jH | grep defunct
+
+wc < /etc/passwd | wc
+ls -l | wc > JUNK
+
+wc -l < /etc/passwd | wc -c > JUNK
+
+ls -la -F -h -t -r | cat -n | wc -l -w -c -L
+ps -jH | grep defunct
+
+cat /etc/passwd | cut -d ':' -f 1 | sort -r | head -n4
+ps -jH | grep defunct
+
+cat < /etc/passwd | sort | cat -n > JUNK
+ps -jH | grep defunct
+
+ps -Ao user | grep rchaney | sort | uniq -c | sort -nr | head
+ps -jH | grep defunct
+
+cat -n Makefile | rev | tac | rev | tac | cut -f2-
+
+ps -elf | grep rchaney | tr r j | awk '{printf("%s\n",$3);}' > JUNK
+
+
+
+# Don't run the below commands from within psush. Run them
+# from a regular bash shell prompt while psush is running in
+# another terminal.
+=======================
+
+ps -jH -u $LOGNAME
+
+ps -jH | grep defunct
+
+ps -Ao user | grep -vs '^root\|^gdm' | sort | uniq -c | sort -nr | head
+

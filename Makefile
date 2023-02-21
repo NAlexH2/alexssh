@@ -25,4 +25,4 @@ tar: clean
 
 # clean up the compiled files and editor chaff
 clean cls:
-	rm -f $(PROG) *.o *~ \#* *.out *.err *.nfs*
+	rm -f $(PROG) *.o *~ \#* *.out *.err *.nfs* file*.txt *_cmp
