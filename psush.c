@@ -245,7 +245,7 @@ exec_commands(cmd_list_t *cmds, char **history)
         else {
             if((pid = fork()) < 0) {
                 perror("\n\nError forking child process ");
-                return exit(EXIT_FAILURE);
+                exit(EXIT_FAILURE);
             }
             else if (pid == 0) {
                 char **r_array = ragged_array(cmd);
@@ -262,6 +262,7 @@ exec_commands(cmd_list_t *cmds, char **history)
                     dup2(fdIn, STDIN_FILENO);
                     close(fdIn);
                 }
+                // use symbolic name REDIRECT_FILE
                 if(cmd->output_dest && cmd->output_file_name) {
                     mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
                     fdOut = open(cmd->output_file_name, 
@@ -276,7 +277,7 @@ exec_commands(cmd_list_t *cmds, char **history)
                     }
                 execvp(r_array[0], r_array);
                 perror("\n\nError on failed exec ");
-                return exit(EXIT_FAILURE);
+                exit(EXIT_FAILURE);
             }
             else {
                 while(wait(NULL) >= 0);
