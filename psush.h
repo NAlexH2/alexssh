@@ -51,20 +51,26 @@ typedef struct cmd_s {
 typedef struct cmd_list_s {
     cmd_t *head;
     cmd_t *tail;
-   ;
     int count;
 } cmd_list_t;
 
 void parse_commands(cmd_list_t *cmd_list);
-void free_list(struct cmd_list_s *);
+
 void print_list(struct cmd_list_s *);
-void free_cmd(struct cmd_s *);
+
 void print_cmd(struct cmd_s *);
 void exec_commands(cmd_list_t *cmds, char ** history);
-int process_user_input_simple(void);
-void simple_argv(int argc, char *argv[]);
+void piped_commands(cmd_list_t *cmds, cmd_t *cmd);
+void redirection_do(cmd_t *cmd);
+char **ragged_array(cmd_t * cmd);
+void free_list(struct cmd_list_s *);
+void free_cmd(struct cmd_s *);
+void free_params (param_t * params);
 void add_history(char *cmd, char ** history);
 void print_history(char ** history);
-void free_params (param_t * params);
-char **ragged_array(cmd_t * cmd);
+int process_user_input_simple(void);
+void simple_argv(int argc, char *argv[]);
+
+
+
 #endif // _CMD_PARSE_H
